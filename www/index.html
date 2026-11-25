@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PC Phone</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1020;color:#fff;font-family:system-ui,sans-serif;padding:24px}
+.c{width:100%;max-width:360px;text-align:center}h1{font-size:22px;margin:0 0 6px}p{color:#94a3b8;font-size:14px;margin:0 0 18px}
+input{width:100%;padding:14px;border-radius:12px;border:1px solid #334155;background:#111a33;color:#fff;font-size:16px}
+button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;background:#3b82f6;color:#fff;font-size:16px;font-weight:600}
+#msg{margin-top:14px;font-size:14px;min-height:20px;color:#fca5a5}
+</style></head><body><div class="c">
+<h1>📱 PC Phone</h1><p>Enter your PC address (shown when you run start-pc).</p>
+<input id="u" placeholder="http://192.168.1.5:3000" inputmode="url" autocapitalize="off" autocorrect="off">
+<button id="go">Connect</button><div id="msg"></div></div>
+<script>
+const K="pcphone_url",u=document.getElementById("u"),m=document.getElementById("msg");
+const norm=v=>{v=v.trim().replace(/\/+$/,"");return /^https?:\/\//.test(v)?v:"http://"+v};
+async function connect(v){
+  v=norm(v);m.style.color="#94a3b8";m.textContent="Connecting…";
+  try{
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);
+    const r=await fetch(v+"/api/health",{signal:c.signal,cache:"no-store"});clearTimeout(t);
+    if(!r.ok)throw 0;
+    localStorage.setItem(K,v);location.replace(v);
+  }catch(e){m.style.color="#fca5a5";m.textContent="Can't reach your PC. Is start-pc running and on the same Wi-Fi (or tunnel)?"}
+}
+document.getElementById("go").onclick=()=>connect(u.value);
+const saved=localStorage.getItem(K);
+if(saved){u.value=saved;if(!location.search.includes("change"))connect(saved)}
+</script></body></html>

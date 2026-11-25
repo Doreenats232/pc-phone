@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* Dark mode is controlled by the phone's Settings toggle (a .dark class), not the OS theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Layout regions of the phone screen (respect iPhone/Android safe areas). */
+.status-h {
+  height: calc(env(safe-area-inset-top, 0px) + 2.25rem);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.nav-h {
+  height: calc(env(safe-area-inset-bottom, 0px) + 2.5rem);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.win-area {
+  top: calc(env(safe-area-inset-top, 0px) + 2.25rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 2.5rem);
+}
+.dock-pos {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 3.4rem);
+}
+
+@keyframes app-open {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.anim-app-open {
+  animation: app-open 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.anim-slide-down {
+  animation: slide-down 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.anim-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-fade {
+  animation: fade-in 0.25s ease-out;
+}
+
+@keyframes boot-bar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.anim-boot {
+  animation: boot-bar 1.7s ease-in-out forwards;
+}
+
+@keyframes banner-in {
+  from {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.anim-banner {
+  animation: banner-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
