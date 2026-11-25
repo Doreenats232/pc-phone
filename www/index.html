@@ -7,36 +7,50 @@
 .c{width:100%;max-width:360px;text-align:center}h1{font-size:22px;margin:0 0 6px}p{color:#94a3b8;font-size:14px;margin:0 0 18px}
 input{width:100%;padding:14px;border-radius:12px;border:1px solid #334155;background:#111a33;color:#fff;font-size:16px}
 button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;background:#3b82f6;color:#fff;font-size:16px;font-weight:600}
-#msg{margin-top:14px;font-size:14px;min-height:20px;color:#fca5a5}
+#saved{margin-top:18px;font-size:12px;color:#64748b;line-height:1.7;word-break:break-all}#saved a{color:#f87171;margin-left:6px}#msg{margin-top:14px;font-size:14px;min-height:20px;color:#fca5a5}
 </style></head><body><div class="c">
-<h1>📱 PC Phone</h1><p>Enter your PC address (shown when you run start-pc).</p>
+<h1>📱 PC Phone</h1><p>Scan the QR on your PC, or type its address.</p>
 <input id="u" placeholder="http://192.168.1.5:3000" inputmode="url" autocapitalize="off" autocorrect="off">
 <button id="go">Connect</button>
-<button id="scan" style="background:#10b981">📷 Scan QR from PC</button><div id="msg"></div></div>
+<button id="scan" style="background:#10b981">📷 Scan QR from PC</button><div id="msg"></div><div id="saved"></div></div>
 <script>
-const K="pcphone_url",u=document.getElementById("u"),m=document.getElementById("msg");
+const KH="pcphone_home",KA="pcphone_away",u=document.getElementById("u"),m=document.getElementById("msg"),sv=document.getElementById("saved");
+if(localStorage.getItem("pcphone_url")&&!localStorage.getItem(KH)){localStorage.setItem(KH,localStorage.getItem("pcphone_url"));localStorage.removeItem("pcphone_url")}
 const norm=v=>{v=v.trim().replace(/\/+$/,"");return /^https?:\/\//.test(v)?v:"http://"+v};
+const kindOf=v=>{try{return /trycloudflare\.com$/.test(new URL(v).hostname)?KA:KH}catch(e){return KH}};
+const say=(t,bad)=>{m.style.color=bad?"#fca5a5":"#94a3b8";m.textContent=t};
+async function ping(v,ms){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(v+"/api/health",{signal:c.signal,cache:"no-store"});return r.ok}catch(e){return false}finally{clearTimeout(t)}
+}
+function showSaved(){
+  const h=localStorage.getItem(KH),a=localStorage.getItem(KA);
+  sv.innerHTML=(h?'🏠 '+h+' <a href="#" data-k="'+KH+'">remove</a><br>':'')+(a?'🌍 '+a+' <a href="#" data-k="'+KA+'">remove</a>':'');
+  sv.querySelectorAll("a").forEach(x=>x.onclick=e=>{e.preventDefault();localStorage.removeItem(x.dataset.k);showSaved()});
+}
 async function connect(v){
-  v=norm(v);m.style.color="#94a3b8";m.textContent="Connecting…";
-  try{
-    const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);
-    const r=await fetch(v+"/api/health",{signal:c.signal,cache:"no-store"});clearTimeout(t);
-    if(!r.ok)throw 0;
-    localStorage.setItem(K,v);location.replace(v);
-  }catch(e){m.style.color="#fca5a5";m.textContent="Can't reach your PC. Is start-pc running and on the same Wi-Fi (or tunnel)?"}
+  v=norm(v);say("Connecting…");
+  if(!(await ping(v,7000))){say("Can't reach your PC. Is it running, and on the same Wi-Fi (or use the away QR)?",true);return}
+  localStorage.setItem(kindOf(v),v);location.replace(v);
+}
+async function auto(){
+  const h=localStorage.getItem(KH),a=localStorage.getItem(KA);
+  if(h){say("Looking for your PC at home…");if(await ping(h,4000)){location.replace(h);return}}
+  if(a){say("Trying away address…");if(await ping(a,9000)){location.replace(a);return}}
+  say(h||a?"Can't reach your PC. Is it running? Scan the QR again if its address changed.":"",true);
 }
 document.getElementById("scan").onclick=async()=>{
   const B=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.BarcodeScanner;
-  if(!B){m.style.color="#fca5a5";m.textContent="Scanner not available. Type the address instead.";return}
+  if(!B){say("Scanner not available. Type the address instead.",true);return}
   try{
     const a=await B.isGoogleBarcodeScannerModuleAvailable();
-    if(!a.available){m.style.color="#94a3b8";m.textContent="Getting scanner ready… tap Scan again in a few seconds.";await B.installGoogleBarcodeScannerModule();return}
+    if(!a.available){say("Getting scanner ready… tap Scan again in a few seconds.");await B.installGoogleBarcodeScannerModule();return}
     const r=await B.scan({formats:["QR_CODE"]});
     const v=r.barcodes&&r.barcodes[0]&&r.barcodes[0].rawValue;
     if(v){u.value=v;connect(v)}
-  }catch(e){m.style.color="#fca5a5";m.textContent="Scan cancelled or failed. You can type the address."}
+  }catch(e){say("Scan cancelled or failed. You can type the address.",true)}
 };
 document.getElementById("go").onclick=()=>connect(u.value);
-const saved=localStorage.getItem(K);
-if(saved){u.value=saved;if(!location.search.includes("change"))connect(saved)}
+showSaved();u.value=localStorage.getItem(KH)||"";
+if(!location.search.includes("change"))auto();
 </script></body></html>

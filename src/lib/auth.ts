@@ -52,19 +52,18 @@ export function validToken(token: string | undefined): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-// Simple brute-force brake: 5 wrong PINs -> locked for a while (grows each time).
-let fails = 0;
-let lockedUntil = 0;
-export function lockRemainingSec(): number {
-  return Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+// Brute-force brake per source (5 wrong PINs -> locked for a while, longer each time).
+const tries = new Map<string, { fails: number; until: number }>();
+export function lockRemainingSec(key: string): number {
+  return Math.max(0, Math.ceil(((tries.get(key)?.until ?? 0) - Date.now()) / 1000));
 }
-export function noteFail() {
-  fails++;
-  if (fails >= 5) {
-    lockedUntil = Date.now() + Math.min(600, 30 * 2 ** Math.floor((fails - 5) / 5)) * 1000;
-  }
+export function noteFail(key: string) {
+  const t = tries.get(key) ?? { fails: 0, until: 0 };
+  t.fails++;
+  if (t.fails >= 5) t.until = Date.now() + Math.min(600, 30 * 2 ** Math.floor((t.fails - 5) / 5)) * 1000;
+  tries.set(key, t);
+  if (tries.size > 500) tries.clear();
 }
-export function noteOk() {
-  fails = 0;
-  lockedUntil = 0;
+export function noteOk(key: string) {
+  tries.delete(key);
 }

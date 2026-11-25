@@ -14,6 +14,9 @@ if [ "$1" = "windows" ]; then
   curl -fsSL https://nodejs.org/dist/v$V/node-v$V-win-x64.zip -o /tmp/node.zip
   unzip -q /tmp/node.zip -d /tmp && mkdir -p $OUT/system/node && cp /tmp/node-v$V-win-x64/node.exe $OUT/system/node/
 fi
+if [ "$1" = "windows" ]; then
+  curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -o $OUT/system/cloudflared.exe
+fi
 cat > "$OUT/Start PC Phone.bat" <<'BAT'
 @echo off
 title PC Phone
@@ -29,8 +32,21 @@ echo  A page with a QR code opens in your browser: scan it from the phone app.
 echo  Everything (apps, files, data) is saved in the "data" folder next to this file.
 echo  Keep this window open. Close it to turn the phone off.
 echo.
+taskkill /im cloudflared.exe /f >nul 2>&1
+del /q "data\tunnel.log" 2>nul
+if exist "system\cloudflared.exe" (
+  if not exist "data\remote.choice" (
+    echo  Use your phone from anywhere, not just home Wi-Fi?
+    echo  ^(You must set a PIN in the phone's Settings first.^)
+    choice /c YN /m " Allow access from anywhere"
+    if errorlevel 2 (echo N> "data\remote.choice") else (echo Y> "data\remote.choice")
+    echo  ^(To be asked again, delete data\remote.choice^)
+  )
+  findstr /b "Y" "data\remote.choice" >nul && start "PC Phone tunnel" /min "system\cloudflared.exe" tunnel --no-autoupdate --url http://localhost:3000 --logfile "%~dp0data\tunnel.log"
+)
 start "" http://localhost:3000/connect
 if exist "system\node\node.exe" (system\node\node.exe system\server.js) else (node system\server.js)
+taskkill /im cloudflared.exe /f >nul 2>&1
 pause
 BAT
 cat > $OUT/data/README.txt <<'TXT'

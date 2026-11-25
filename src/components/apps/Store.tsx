@@ -11,11 +11,15 @@ const TABS: Tab[] = ["For you", "Top charts", "Categories", "Installed"];
 const CATEGORIES: AppCategory[] = ["Productivity", "Media", "Games", "Internet", "Tools", "System"];
 
 export default function StoreApp() {
-  const { catalog, isInstalled, installApp, uninstallApp, notify, openApp, storage, settings } = useOS();
+  const { catalog, isInstalled, installApp, uninstallApp, addWebApp, notify, openApp, storage, settings } = useOS();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<Tab>("For you");
   const [cat, setCat] = useState<AppCategory | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [siteUrl, setSiteUrl] = useState("");
+  const [siteName, setSiteName] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
 
   const quotaBytes = settings.quotaMb * MB;
@@ -49,6 +53,21 @@ export default function StoreApp() {
         .catch((e: Error) => notify({ title: "Install failed", body: e.message, icon: "⚠️" }))
         .finally(() => setProgress((p) => { const n = { ...p }; delete n[id]; return n; }));
     }, 100);
+  };
+
+  const addSite = async () => {
+    setAddBusy(true);
+    try {
+      const a = await addWebApp(siteUrl, siteName || undefined);
+      notify({ title: `${a.name} added`, body: "Find it on your home screen.", icon: "🌐" });
+      setAdding(false);
+      setSiteUrl("");
+      setSiteName("");
+      openApp(a.id);
+    } catch (e) {
+      notify({ title: "Couldn't add website", body: (e as Error).message, icon: "⚠️" });
+    }
+    setAddBusy(false);
   };
 
   const remove = async (id: string, name: string) => {
@@ -86,8 +105,12 @@ export default function StoreApp() {
   const Icon = ({ id, size = 56 }: { id: string; size?: number }) => {
     const a = catalog.find((x) => x.id === id)!;
     return (
-      <div className="grid shrink-0 place-items-center rounded-[22%] shadow-sm" style={{ width: size, height: size, fontSize: size * 0.5, background: `linear-gradient(145deg, ${a.colors[0]}, ${a.colors[1]})` }}>
+      <div className="relative grid shrink-0 place-items-center overflow-hidden rounded-[22%] shadow-sm" style={{ width: size, height: size, fontSize: size * 0.5, background: `linear-gradient(145deg, ${a.colors[0]}, ${a.colors[1]})` }}>
         {a.icon}
+        {a.iconUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={a.iconUrl} alt="" className="absolute rounded-md bg-white object-contain p-0.5" style={{ width: size * 0.64, height: size * 0.64 }} onError={(e) => (e.currentTarget.style.display = "none")} />
+        )}
       </div>
     );
   };
@@ -107,7 +130,7 @@ export default function StoreApp() {
             </div>
           </div>
           <div className="mt-5 flex justify-around text-center text-xs text-slate-500">
-            <div><div className="text-sm font-medium text-slate-800">{open.rating} ★</div>Rating</div>
+            <div><div className="text-sm font-medium text-slate-800">{open.rating ? `${open.rating} ★` : "Web"}</div>{open.rating ? "Rating" : "Website"}</div>
             <div><div className="text-sm font-medium text-slate-800">{open.sizeMb} MB</div>On your PC</div>
             <div><div className="text-sm font-medium text-slate-800">{open.core ? "System" : "Free"}</div>Type</div>
           </div>
@@ -124,7 +147,16 @@ export default function StoreApp() {
         <div className="flex items-center gap-3 rounded-full bg-slate-100 px-4 py-2.5">
           <span className="text-slate-500">🔍</span>
           <input className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search apps" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button onClick={() => setAdding((v) => !v)} className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white" aria-label="Add website">＋ Website</button>
         </div>
+        {adding && (
+          <div className="mt-2 space-y-2 rounded-2xl border border-slate-200 p-3">
+            <p className="text-xs text-slate-500">Add any website as an app on your home screen.</p>
+            <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600" placeholder="youtube.com" inputMode="url" autoCapitalize="off" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} />
+            <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-600" placeholder="Name (optional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} />
+            <button disabled={addBusy || !siteUrl.trim()} onClick={() => void addSite()} className="w-full rounded-full bg-emerald-600 py-2 text-sm font-medium text-white disabled:opacity-50">Add to phone</button>
+          </div>
+        )}
         <div className="no-scrollbar mt-2 flex gap-5 overflow-x-auto border-b border-slate-200">
           {TABS.map((t) => (
             <button key={t} onClick={() => { setTab(t); setCat(null); }} className={`shrink-0 border-b-2 pb-2 text-sm ${tab === t ? "border-emerald-600 font-medium text-emerald-700" : "border-transparent text-slate-500"}`}>{t}</button>
@@ -151,7 +183,7 @@ export default function StoreApp() {
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{a.name}</div>
                   <div className="truncate text-xs text-slate-500">{a.category} · {a.sizeMb} MB</div>
-                  <div className="text-xs text-slate-500">{a.rating} ★</div>
+                  <div className="text-xs text-slate-500">{a.rating ? `${a.rating} ★` : "Web app"}</div>
                 </div>
               </button>
               <Action id={a.id} />

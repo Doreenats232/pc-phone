@@ -16,10 +16,14 @@ export function AppIcon({ app, onOpen, small }: { app: AppDef; onOpen: () => voi
       aria-label={app.name}
     >
       <span
-        className={`grid ${size} place-items-center rounded-[1.1rem] shadow-lg shadow-black/30 ring-1 ring-white/20`}
+        className={`relative grid ${size} place-items-center overflow-hidden rounded-[1.1rem] shadow-lg shadow-black/30 ring-1 ring-white/20`}
         style={{ background: `linear-gradient(145deg, ${app.colors[0]}, ${app.colors[1]})` }}
       >
         {app.icon}
+        {app.iconUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={app.iconUrl} alt="" className="absolute inset-0 m-auto h-[64%] w-[64%] rounded-md bg-white object-contain p-0.5" onError={(e) => (e.currentTarget.style.display = "none")} />
+        )}
       </span>
       {!small && <span className="w-full truncate text-center text-[11px] font-medium text-white drop-shadow">{app.name}</span>}
     </button>

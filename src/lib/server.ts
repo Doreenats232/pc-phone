@@ -3,7 +3,7 @@ import { appData, files, installedApps } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
-import { CATALOG, DEFAULT_SETTINGS, FOLDERS, MB, type SystemSettings } from "@/lib/catalog";
+import { CATALOG, DEFAULT_SETTINGS, FOLDERS, MB, type AppDef, type SystemSettings } from "@/lib/catalog";
 
 export function jsonError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
@@ -123,4 +123,56 @@ export function getSystemInfo() {
     serverUptime: process.uptime(),
     nodeVersion: process.version,
   };
+}
+
+// ---- Web apps (any website added as an app) ----
+export type WebAppRow = { id: string; name: string; url: string };
+
+export async function getWebApps(): Promise<WebAppRow[]> {
+  const rows = await db
+    .select({ value: appData.value })
+    .from(appData)
+    .where(and(eq(appData.appId, "system"), eq(appData.key, "webapps")))
+    .limit(1);
+  return Array.isArray(rows[0]?.value) ? (rows[0].value as WebAppRow[]) : [];
+}
+
+export async function setWebApps(list: WebAppRow[]) {
+  await db
+    .insert(appData)
+    .values({ appId: "system", key: "webapps", value: list })
+    .onConflictDoUpdate({ target: [appData.appId, appData.key], set: { value: list, updatedAt: new Date() } });
+}
+
+const PALETTE: [string, string][] = [
+  ["#fca5a5", "#dc2626"], ["#fdba74", "#ea580c"], ["#fcd34d", "#b45309"], ["#86efac", "#15803d"],
+  ["#5eead4", "#0f766e"], ["#7dd3fc", "#0284c7"], ["#a5b4fc", "#4338ca"], ["#f0abfc", "#9333ea"],
+];
+
+export function webAppToDef(w: WebAppRow): AppDef {
+  let host = "";
+  try {
+    host = new URL(w.url).hostname;
+  } catch {}
+  let h = 0;
+  for (const c of host) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return {
+    id: w.id,
+    name: w.name,
+    icon: (w.name[0] ?? "W").toUpperCase(),
+    iconUrl: host ? `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(host)}` : undefined,
+    colors: PALETTE[h % PALETTE.length],
+    description: `Website: ${host}`,
+    url: w.url,
+    category: "Internet",
+    sizeMb: 1,
+    rating: 0,
+    core: false,
+    preinstalled: false,
+  };
+}
+
+export async function allApps(): Promise<AppDef[]> {
+  const web = await getWebApps();
+  return [...CATALOG, ...web.map(webAppToDef)];
 }

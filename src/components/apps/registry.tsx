@@ -13,6 +13,7 @@ import PaintApp from "./Paint";
 import PianoApp from "./Piano";
 import SnakeApp from "./Snake";
 import Game2048App from "./Game2048";
+import WebApp from "./WebApp";
 
 // Maps an app id from the catalog to its UI.
 const REGISTRY: Record<string, ComponentType> = {
@@ -31,6 +32,7 @@ const REGISTRY: Record<string, ComponentType> = {
 };
 
 export function AppView({ id }: { id: string }) {
+  if (id.startsWith("web-")) return <WebApp id={id} />;
   const C = REGISTRY[id];
   if (!C) return <div className="p-6 text-sm">This app is unavailable.</div>;
   return <C />;

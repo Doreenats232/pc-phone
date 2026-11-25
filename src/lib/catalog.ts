@@ -10,6 +10,8 @@ export type AppDef = {
   icon: string;
   colors: [string, string];
   description: string;
+  url?: string; // web apps
+  iconUrl?: string;
   category: AppCategory;
   sizeMb: number;
   rating: number;

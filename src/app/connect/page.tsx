@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import os from "node:os";
+import { tunnelEnabled, tunnelUrl } from "@/lib/tunnel";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export default async function Connect() {
   const port = process.env.PORT ?? "3000";
   const urls = lanAddresses().map((a) => `http://${a}:${port}`);
   const qrs = await Promise.all(urls.map((u) => QRCode.toString(u, { type: "svg", margin: 1, width: 260 })));
+  const away = tunnelUrl();
+  const awayQr = away ? await QRCode.toString(away, { type: "svg", margin: 1, width: 260 }) : null;
+  const waiting = tunnelEnabled() && !away;
 
   return (
     <main className="grid min-h-dvh place-items-center bg-slate-950 p-6 text-white">
@@ -32,6 +36,21 @@ export default async function Connect() {
             {urls.length > 1 && i === 0 && <div className="text-xs text-slate-500">Most likely your home Wi-Fi</div>}
           </div>
         ))}
+        {waiting && (
+          <div className="mt-10 text-sm text-slate-400">
+            <meta httpEquiv="refresh" content="4" />
+            ⏳ Setting up away-from-home access…
+          </div>
+        )}
+        {away && awayQr && (
+          <div className="mt-10 border-t border-slate-800 pt-8">
+            <h2 className="text-lg font-semibold">🌍 Away from home</h2>
+            <p className="mt-1 text-sm text-slate-400">Scan this one too, once. Needs a PIN (Settings &gt; Security).</p>
+            <div className="mx-auto mt-4 inline-block rounded-2xl bg-white p-3" dangerouslySetInnerHTML={{ __html: awayQr }} />
+            <div className="mt-2 break-all font-mono text-sm">{away}</div>
+            <div className="text-xs text-slate-500">This address changes each time the PC app restarts.</div>
+          </div>
+        )}
         <p className="mt-8 text-xs text-slate-500">Phone and PC must be on the same Wi-Fi. Keep this PC running.</p>
       </div>
     </main>

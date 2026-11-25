@@ -14,6 +14,7 @@ export type OS = {
   isInstalled: (id: string) => boolean;
   installApp: (id: string) => Promise<void>;
   uninstallApp: (id: string) => Promise<void>;
+  addWebApp: (url: string, name?: string) => Promise<AppDef>;
   settings: SystemSettings;
   setSettings: (patch: Partial<SystemSettings>) => void;
   storage: StorageInfo | null;
@@ -57,6 +58,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState<boolean | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [catalog, setCatalog] = useState<AppDef[]>(CATALOG);
   const [banner, setBanner] = useState<Notice | null>(null);
   const [openApps, setOpenApps] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -68,7 +70,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshApps = useCallback(async () => {
-    const d = await api<{ installed: { appId: string }[] }>("/api/apps");
+    const d = await api<{ catalog: AppDef[]; installed: { appId: string }[] }>("/api/apps");
+    setCatalog(d.catalog);
     setInstalled(d.installed.map((i) => i.appId));
   }, []);
 
@@ -138,6 +141,15 @@ export function OSProvider({ children }: { children: ReactNode }) {
     [refreshApps, refreshStorage],
   );
 
+  const addWebApp = useCallback(
+    async (url: string, name?: string) => {
+      const d = await api<{ app: AppDef }>("/api/webapps", { method: "POST", json: { url, name } });
+      await Promise.all([refreshApps(), refreshStorage()]);
+      return d.app;
+    },
+    [refreshApps, refreshStorage],
+  );
+
   const setSettings = useCallback(
     (patch: Partial<SystemSettings>) => setSettingsRaw((prev) => ({ ...prev, ...patch })),
     [setSettingsRaw],
@@ -185,7 +197,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
   const unlock = useCallback(() => setLocked(false), []);
 
   const value: OS = {
-    catalog: CATALOG,
+    catalog,
+    addWebApp,
     installed,
     isInstalled,
     installApp,
