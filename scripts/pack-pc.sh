@@ -24,9 +24,14 @@ cd /d "%~dp0"
 set PC_DATA_DIR=%~dp0data
 set HOSTNAME=0.0.0.0
 set PORT=3000
+if not exist "system\.next" (
+  echo  Download is incomplete: the system\.next folder is missing. Re-download the zip.
+  pause
+  exit /b 1
+)
 echo.
 echo  PC PHONE is running. Type this address in the phone app:
-for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do echo     http://%%a:3000
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do for /f "tokens=*" %%b in ("%%a") do echo %%b| findstr /b "169.254" >nul || echo     http://%%b:3000
 echo.
 echo  A page with a QR code opens in your browser: scan it from the phone app.
 echo  Everything (apps, files, data) is saved in the "data" folder next to this file.

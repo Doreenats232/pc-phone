@@ -8,7 +8,7 @@ function lanAddresses(): string[] {
   const out: string[] = [];
   for (const list of Object.values(os.networkInterfaces())) {
     for (const i of list ?? []) {
-      if (i.family === "IPv4" && !i.internal) out.push(i.address);
+      if (i.family === "IPv4" && !i.internal && !i.address.startsWith("169.254.")) out.push(i.address);
     }
   }
   const rank = (a: string) => (a.startsWith("192.168.") ? 0 : a.startsWith("10.") ? 1 : 2);
