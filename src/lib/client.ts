@@ -13,6 +13,10 @@ export async function api<T = unknown>(url: string, init: ApiInit = {}): Promise
     },
     body: json !== undefined ? JSON.stringify(json) : body,
   });
+  if (res.status === 401 && typeof window !== "undefined") {
+    window.location.href = "/unlock";
+    throw new Error("Locked");
+  }
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
   return data as T;

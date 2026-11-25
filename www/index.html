@@ -11,7 +11,8 @@ button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;backg
 </style></head><body><div class="c">
 <h1>📱 PC Phone</h1><p>Enter your PC address (shown when you run start-pc).</p>
 <input id="u" placeholder="http://192.168.1.5:3000" inputmode="url" autocapitalize="off" autocorrect="off">
-<button id="go">Connect</button><div id="msg"></div></div>
+<button id="go">Connect</button>
+<button id="scan" style="background:#10b981">📷 Scan QR from PC</button><div id="msg"></div></div>
 <script>
 const K="pcphone_url",u=document.getElementById("u"),m=document.getElementById("msg");
 const norm=v=>{v=v.trim().replace(/\/+$/,"");return /^https?:\/\//.test(v)?v:"http://"+v};
@@ -24,6 +25,17 @@ async function connect(v){
     localStorage.setItem(K,v);location.replace(v);
   }catch(e){m.style.color="#fca5a5";m.textContent="Can't reach your PC. Is start-pc running and on the same Wi-Fi (or tunnel)?"}
 }
+document.getElementById("scan").onclick=async()=>{
+  const B=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.BarcodeScanner;
+  if(!B){m.style.color="#fca5a5";m.textContent="Scanner not available. Type the address instead.";return}
+  try{
+    const a=await B.isGoogleBarcodeScannerModuleAvailable();
+    if(!a.available){m.style.color="#94a3b8";m.textContent="Getting scanner ready… tap Scan again in a few seconds.";await B.installGoogleBarcodeScannerModule();return}
+    const r=await B.scan({formats:["QR_CODE"]});
+    const v=r.barcodes&&r.barcodes[0]&&r.barcodes[0].rawValue;
+    if(v){u.value=v;connect(v)}
+  }catch(e){m.style.color="#fca5a5";m.textContent="Scan cancelled or failed. You can type the address."}
+};
 document.getElementById("go").onclick=()=>connect(u.value);
 const saved=localStorage.getItem(K);
 if(saved){u.value=saved;if(!location.search.includes("change"))connect(saved)}

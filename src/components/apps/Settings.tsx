@@ -1,9 +1,47 @@
 "use client";
 
 import { useOS } from "@/components/phone/os-context";
+import { useEffect, useState } from "react";
 import { MB, WALLPAPERS } from "@/lib/catalog";
-import { fmtBytes, fmtMb, fmtUptime } from "@/lib/client";
+import { api, fmtBytes, fmtMb, fmtUptime } from "@/lib/client";
 import { AppShell, Bar, btn, btnDanger, btnGhost, input, Row, Section, Toggle } from "./ui";
+
+function SecuritySection({ notify }: { notify: (n: { title: string; body: string; icon: string }) => void }) {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [current, setCurrent] = useState("");
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api<{ enabled: boolean }>("/api/auth/pin").then((d) => setEnabled(d.enabled)).catch(() => {});
+  }, []);
+  const run = async (action: "set" | "remove") => {
+    setBusy(true);
+    try {
+      const d = await api<{ enabled: boolean }>("/api/auth/pin", { method: "POST", json: { action, pin, current } });
+      setEnabled(d.enabled);
+      setPin("");
+      setCurrent("");
+      notify({ title: d.enabled ? "PIN lock on" : "PIN lock off", body: d.enabled ? "Your phone now asks for the PIN." : "Anyone on your Wi-Fi can connect.", icon: "🔒" });
+    } catch (e) {
+      notify({ title: "PIN not changed", body: (e as Error).message, icon: "⚠️" });
+    }
+    setBusy(false);
+  };
+  const digits = (v: string) => v.replace(/\D/g, "").slice(0, 8);
+  return (
+    <Section title="Security">
+      <Row label="PIN lock" value={enabled === null ? "…" : enabled ? "On" : "Off"} />
+      {enabled && (
+        <input className={input} type="password" inputMode="numeric" placeholder="Current PIN" value={current} onChange={(e) => setCurrent(digits(e.target.value))} />
+      )}
+      <input className={input} type="password" inputMode="numeric" placeholder={enabled ? "New PIN (4-8 digits)" : "Set a PIN (4-8 digits)"} value={pin} onChange={(e) => setPin(digits(e.target.value))} />
+      <div className="flex gap-2">
+        <button className={btn} disabled={busy || pin.length < 4} onClick={() => void run("set")}>{enabled ? "Change PIN" : "Turn on"}</button>
+        {enabled && <button className={btnDanger} disabled={busy || current.length < 4} onClick={() => void run("remove")}>Turn off</button>}
+      </div>
+    </Section>
+  );
+}
 
 const PRESETS_MB = [2048, 5120, 10240, 25600, 51200];
 
@@ -57,7 +95,14 @@ export default function SettingsApp() {
           <Row label="Memory used" value={sys ? `${fmtBytes(sys.totalMem - sys.freeMem)} / ${fmtBytes(sys.totalMem)}` : "—"} />
           <Row label="PC uptime" value={sys ? fmtUptime(sys.uptime) : "—"} />
           <Row label="Server uptime" value={sys ? fmtUptime(sys.serverUptime) : "—"} />
+          {typeof window !== "undefined" && "Capacitor" in window && (
+            <button className={btnGhost} onClick={() => (window.location.href = "http://localhost/?change=1")}>
+              Change PC / scan QR
+            </button>
+          )}
         </Section>
+
+        <SecuritySection notify={notify} />
 
         <Section title="Storage on PC">
           {storage?.disk ? (

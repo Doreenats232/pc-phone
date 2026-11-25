@@ -25,9 +25,11 @@ echo.
 echo  PC PHONE is running. Type this address in the phone app:
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do echo     http://%%a:3000
 echo.
+echo  A page with a QR code opens in your browser: scan it from the phone app.
 echo  Everything (apps, files, data) is saved in the "data" folder next to this file.
 echo  Keep this window open. Close it to turn the phone off.
 echo.
+start "" http://localhost:3000/connect
 if exist "system\node\node.exe" (system\node\node.exe system\server.js) else (node system\server.js)
 pause
 BAT
