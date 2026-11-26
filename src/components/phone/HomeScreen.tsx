@@ -4,7 +4,11 @@ import type { AppDef } from "@/lib/catalog";
 import { DOCK_IDS, MB } from "@/lib/catalog";
 import { fmtBytes, fmtMb } from "@/lib/client";
 import { useNow } from "@/lib/hooks";
+import { useEffect } from "react";
+import { checkBuilds } from "@/lib/updates";
 import { useOS } from "./os-context";
+
+let updateChecked = false; // once per page load
 
 export function AppIcon({ app, onOpen, small }: { app: AppDef; onOpen: () => void; small?: boolean }) {
   const size = small ? "h-[54px] w-[54px] text-[26px]" : "h-[60px] w-[60px] text-[30px]";
@@ -32,6 +36,16 @@ export function AppIcon({ app, onOpen, small }: { app: AppDef; onOpen: () => voi
 
 export function HomeScreen() {
   const os = useOS();
+  const { notify } = os;
+  useEffect(() => {
+    if (updateChecked) return;
+    updateChecked = true;
+    void checkBuilds().then((b) => {
+      if (b.latest == null) return;
+      const old = (b.app != null && b.app > 0 && b.latest > b.app) || (b.pc > 0 && b.latest > b.pc);
+      if (old) notify({ title: "Update available", body: "Open Settings > Updates to get it.", icon: "⬆️" });
+    });
+  }, [notify]);
   const now = useNow(1000);
   const apps = os.catalog.filter((a) => os.isInstalled(a.id));
   const dock = DOCK_IDS.map((id) => os.catalog.find((a) => a.id === id)).filter(

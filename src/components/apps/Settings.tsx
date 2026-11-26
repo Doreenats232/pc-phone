@@ -3,6 +3,7 @@
 import { useOS } from "@/components/phone/os-context";
 import { useEffect, useState } from "react";
 import { MB, WALLPAPERS } from "@/lib/catalog";
+import { APK_URL, ZIP_URL, checkBuilds, type Builds } from "@/lib/updates";
 import { api, fmtBytes, fmtMb, fmtUptime } from "@/lib/client";
 import { AppShell, Bar, btn, btnDanger, btnGhost, input, Row, Section, Toggle } from "./ui";
 
@@ -39,6 +40,39 @@ function SecuritySection({ notify }: { notify: (n: { title: string; body: string
         <button className={btn} disabled={busy || pin.length < 4} onClick={() => void run("set")}>{enabled ? "Change PIN" : "Turn on"}</button>
         {enabled && <button className={btnDanger} disabled={busy || current.length < 4} onClick={() => void run("remove")}>Turn off</button>}
       </div>
+    </Section>
+  );
+}
+
+function UpdateSection() {
+  const [b, setB] = useState<Builds | null>(null);
+  const [busy, setBusy] = useState(false);
+  const check = async () => {
+    setBusy(true);
+    setB(await checkBuilds());
+    setBusy(false);
+  };
+  useEffect(() => {
+    void check();
+  }, []);
+  const appOld = b?.latest != null && b.app != null && b.app > 0 && b.latest > b.app;
+  const pcOld = b?.latest != null && b.pc > 0 && b.latest > b.pc;
+  return (
+    <Section title="Updates">
+      <Row label="Phone app" value={b?.app != null ? `build ${b.app}` : "browser"} />
+      <Row label="PC package" value={b && b.pc > 0 ? `build ${b.pc}` : "—"} />
+      <Row label="Newest" value={b ? (b.latest != null ? `build ${b.latest}` : "couldn't check") : "…"} />
+      {appOld && (
+        <button className={btn} onClick={() => window.open(APK_URL, "_blank")}>Download new phone app</button>
+      )}
+      {pcOld && (
+        <>
+          <button className={btn} onClick={() => window.open(ZIP_URL, "_blank")}>Download new PC package</button>
+          <p className="text-xs text-slate-500">Close PC Phone, unzip over the old folder (keep your data folder), start again.</p>
+        </>
+      )}
+      {b?.latest != null && !appOld && !pcOld && <p className="text-xs text-emerald-600">You&apos;re up to date.</p>}
+      <button className={btnGhost} disabled={busy} onClick={() => void check()}>{busy ? "Checking…" : "Check for updates"}</button>
     </Section>
   );
 }
@@ -138,7 +172,7 @@ export default function SettingsApp() {
           <Row label="Memory used" value={sys ? `${fmtBytes(sys.totalMem - sys.freeMem)} / ${fmtBytes(sys.totalMem)}` : "—"} />
           <Row label="PC uptime" value={sys ? fmtUptime(sys.uptime) : "—"} />
           <Row label="Server uptime" value={sys ? fmtUptime(sys.serverUptime) : "—"} />
-          {typeof window !== "undefined" && "Capacitor" in window && (
+          {typeof navigator !== "undefined" && /PCPhoneApp\//.test(navigator.userAgent) && (
             <button className={btnGhost} onClick={() => (window.location.href = "http://localhost/?change=1")}>
               Change PC / scan QR
             </button>
@@ -148,6 +182,8 @@ export default function SettingsApp() {
         <SecuritySection notify={notify} />
 
         <BackupSection notify={notify} />
+
+        <UpdateSection />
 
         <Section title="Storage on PC">
           {storage?.disk ? (

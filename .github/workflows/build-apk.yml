@@ -8,6 +8,8 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      PC_BUILD: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,11 +23,40 @@ jobs:
           grep -n "CAMERA" android/app/src/main/AndroidManifest.xml
       - run: npx --yes @capacitor/assets generate --android
       - run: npx cap sync android
-      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - name: Version + sign
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/pcphone.jks"
+          sed -i "s/versionCode [0-9]*/versionCode $PC_BUILD/; s/versionName \"[^\"]*\"/versionName \"1.0.$PC_BUILD\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
+          grep -q "versionCode $PC_BUILD" android/app/build.gradle
+          cat >> android/app/build.gradle <<EOF
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("$RUNNER_TEMP/pcphone.jks")
+                      storePassword System.getenv("KS_PASS")
+                      keyAlias "pcphone"
+                      keyPassword System.getenv("KS_PASS")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: PCPhone-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
   pc:
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +65,8 @@ jobs:
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
       - run: scripts/pack-pc.sh windows
+        env:
+          NEXT_PUBLIC_BUILD: ${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
           name: PCPhone-for-Windows
@@ -47,9 +80,9 @@ jobs:
         with: { path: out }
       - run: |
           cd out/PCPhone-for-Windows && zip -qr ../../PCPhone-for-Windows.zip . && cd ../..
-          cp out/PCPhone-apk/app-debug.apk PCPhone.apk
+          cp out/PCPhone-apk/app-release.apk PCPhone.apk
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag --repo ${{ github.repository }} || true
-          gh release create latest PCPhone.apk PCPhone-for-Windows.zip --repo ${{ github.repository }} --title "PC Phone (latest)" --notes "APK for your phone + Windows PC package" --latest
+          gh release create latest PCPhone.apk PCPhone-for-Windows.zip --repo ${{ github.repository }} --title "PC Phone build ${{ github.run_number }}" --notes "build=${{ github.run_number }}" --latest
