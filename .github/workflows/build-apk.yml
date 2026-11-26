@@ -64,6 +64,19 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: Build PCPhone.exe (launcher + tray)
+        working-directory: launcher
+        run: |
+          go mod tidy
+          go install github.com/tc-hib/go-winres@latest
+          "$(go env GOPATH)/bin/go-winres" simply --icon icon.ico --manifest gui --arch amd64
+          ls
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H=windowsgui -s -w" -o PCPhone.exe .
+          ls -la PCPhone.exe
       - run: scripts/pack-pc.sh windows
         env:
           NEXT_PUBLIC_BUILD: ${{ github.run_number }}

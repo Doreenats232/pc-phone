@@ -17,7 +17,8 @@ fi
 if [ "$1" = "windows" ]; then
   curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -o $OUT/system/cloudflared.exe
 fi
-cat > "$OUT/Start PC Phone.bat" <<'BAT'
+[ -f launcher/PCPhone.exe ] && cp launcher/PCPhone.exe $OUT/PCPhone.exe
+cat > "$OUT/Troubleshoot (shows window).bat" <<'BAT'
 @echo off
 title PC Phone
 cd /d "%~dp0"

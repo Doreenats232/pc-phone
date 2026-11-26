@@ -3,3 +3,6 @@ node_modules
 data
 android
 PCPhone
+launcher/PCPhone.exe
+launcher/*.syso
+launcher/go.sum
