@@ -56,6 +56,6 @@ pause
 BAT
 cat > $OUT/data/README.txt <<'TXT'
 Your whole phone lives in this folder (database, files, installed apps).
-Copy this folder to back it up or move it to another PC.
+Use Settings > Backup in the phone to copy this to a USB drive or another folder automatically.
 TXT
 echo "Done: $OUT/"

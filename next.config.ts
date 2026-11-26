@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: { proxyClientMaxBodySize: "2gb" },
   serverExternalPackages: ["@electric-sql/pglite"],
   // Pages + API are never cached on the phone.
   async headers() {

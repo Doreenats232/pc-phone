@@ -30,6 +30,8 @@ export const CATALOG: AppDef[] = [
   { id: "browser", name: "Browser", icon: "🌐", colors: ["#7dd3fc", "#0284c7"], description: "Browse the web with bookmarks and back navigation.", category: "Internet", sizeMb: 25, rating: 4.4, core: false, preinstalled: false },
   { id: "paint", name: "Paint", icon: "🎨", colors: ["#f0abfc", "#9333ea"], description: "Draw, undo and save pictures to your PC.", category: "Media", sizeMb: 12, rating: 4.6, core: false, preinstalled: false },
   { id: "piano", name: "Piano", icon: "🎹", colors: ["#fbcfe8", "#9d174d"], description: "Play a synth piano with touch or keyboard.", category: "Media", sizeMb: 18, rating: 4.7, core: false, preinstalled: false },
+  { id: "camera", name: "Camera", icon: "📷", colors: ["#f87171", "#b91c1c"], description: "Take photos and videos. They save straight to your PC, not your phone.", category: "Media", sizeMb: 6, rating: 4.8, core: false, preinstalled: true },
+  { id: "gallery", name: "Gallery", icon: "🖼️", colors: ["#a78bfa", "#6d28d9"], description: "Your photos and videos, stored on your PC. Move old phone photos here to free space.", category: "Media", sizeMb: 5, rating: 4.8, core: false, preinstalled: true },
   { id: "snake", name: "Snake", icon: "🐍", colors: ["#86efac", "#15803d"], description: "The classic snake game with saved high scores.", category: "Games", sizeMb: 6, rating: 4.8, core: false, preinstalled: false },
   { id: "2048", name: "2048", icon: "🔢", colors: ["#fcd34d", "#b45309"], description: "Slide and merge tiles. Your game is saved to the PC.", category: "Games", sizeMb: 8, rating: 4.9, core: false, preinstalled: false },
 ];

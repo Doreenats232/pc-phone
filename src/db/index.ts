@@ -35,23 +35,26 @@ create table if not exists app_data (
 );
 `;
 
-type G = typeof globalThis & { __pcDb?: { db: ReturnType<typeof drizzlePg>; ready: Promise<void> } };
+type G = typeof globalThis & {
+  __pcDb?: { db: ReturnType<typeof drizzlePg>; ready: Promise<void>; pglite: PGlite | null };
+};
 const g = globalThis as G;
 
 function create() {
   if (databaseUrl) {
     const pool = new Pool({ connectionString: databaseUrl });
     const db = drizzlePg(pool);
-    return { db, ready: pool.query(SCHEMA_SQL).then(() => undefined) };
+    return { db, ready: pool.query(SCHEMA_SQL).then(() => undefined), pglite: null };
   }
   const dir = (process.env.PC_DATA_DIR ?? "./data") + "/db";
   mkdirSync(dir, { recursive: true });
   const client = new PGlite(dir);
   const db = drizzlePglite(client) as unknown as ReturnType<typeof drizzlePg>;
-  return { db, ready: client.exec(SCHEMA_SQL).then(() => undefined) };
+  return { db, ready: client.exec(SCHEMA_SQL).then(() => undefined), pglite: client };
 }
 
 const inst = g.__pcDb ?? (g.__pcDb = create());
 
 export const db = inst.db;
 export const dbReady = inst.ready;
+export const pglite = inst.pglite;

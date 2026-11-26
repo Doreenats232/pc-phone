@@ -1,4 +1,5 @@
 import { db, dbReady } from "@/db";
+import { mediaBytes } from "@/lib/media";
 import { appData, files, installedApps } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { statfs } from "node:fs/promises";
@@ -34,6 +35,23 @@ const WELCOME = [
 
 let seedPromise: Promise<void> | null = null;
 
+const NEW_DEFAULTS = [{ flag: "defaults_media", ids: ["camera", "gallery"] }];
+
+// Apps added in later versions get installed once on phones that already exist.
+async function addNewDefaults() {
+  for (const d of NEW_DEFAULTS) {
+    const seen = await db
+      .select({ key: appData.key })
+      .from(appData)
+      .where(and(eq(appData.appId, "system"), eq(appData.key, d.flag)))
+      .limit(1);
+    if (seen.length) continue;
+    const apps = CATALOG.filter((a) => d.ids.includes(a.id));
+    await db.insert(installedApps).values(apps.map((a) => ({ appId: a.id, sizeMb: a.sizeMb }))).onConflictDoNothing();
+    await db.insert(appData).values({ appId: "system", key: d.flag, value: true }).onConflictDoNothing();
+  }
+}
+
 async function doSeed() {
   await dbReady;
   const rows = await db
@@ -41,7 +59,10 @@ async function doSeed() {
     .from(appData)
     .where(and(eq(appData.appId, "system"), eq(appData.key, "settings")))
     .limit(1);
-  if (rows.length > 0) return;
+  if (rows.length > 0) {
+    await addNewDefaults();
+    return;
+  }
 
   await db
     .insert(appData)
@@ -55,6 +76,7 @@ async function doSeed() {
     { folder: "/Documents", name: "Welcome.txt", mimeType: "text/plain", content: WELCOME, sizeBytes: Buffer.byteLength(WELCOME, "utf8") },
     { folder: "/Notes", name: "Ideas.txt", mimeType: "text/plain", content: "Ideas\n\n- Build a weather app\n- Learn to draw", sizeBytes: 40 },
   ]);
+  await addNewDefaults();
 }
 
 /** Idempotent first-boot seeding (shared promise so concurrent requests don't double insert). */
@@ -85,7 +107,7 @@ export async function getUsage() {
     .select({ bytes: sql<number>`coalesce(sum(${files.sizeBytes}), 0)::float8` })
     .from(files);
   const appsMb = Number(a?.mb ?? 0);
-  const filesBytes = Number(f?.bytes ?? 0);
+  const filesBytes = Number(f?.bytes ?? 0) + mediaBytes();
   return { appsMb, filesBytes, usedBytes: appsMb * MB + filesBytes };
 }
 

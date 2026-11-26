@@ -43,6 +43,49 @@ function SecuritySection({ notify }: { notify: (n: { title: string; body: string
   );
 }
 
+type BackupInfo = { dir: string; auto: boolean; lastRun?: string; lastOk?: boolean; lastMsg?: string };
+
+function BackupSection({ notify }: { notify: (n: { title: string; body: string; icon: string }) => void }) {
+  const [c, setC] = useState<BackupInfo | null>(null);
+  const [dir, setDir] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api<BackupInfo>("/api/backup").then((d) => { setC(d); setDir(d.dir); }).catch(() => {});
+  }, []);
+  const save = async (patch: Partial<BackupInfo>) => {
+    try {
+      setC(await api<BackupInfo>("/api/backup", { method: "POST", json: patch }));
+      return true;
+    } catch (e) {
+      notify({ title: "Not saved", body: (e as Error).message, icon: "⚠️" });
+      return false;
+    }
+  };
+  const run = async () => {
+    setBusy(true);
+    if (dir !== c?.dir && !(await save({ dir }))) return setBusy(false);
+    try {
+      const r = await api<{ message: string; cfg: BackupInfo }>("/api/backup/run", { method: "POST" });
+      setC(r.cfg);
+      notify({ title: "Backup finished", body: r.message, icon: "💾" });
+    } catch (e) {
+      notify({ title: "Backup failed", body: (e as Error).message, icon: "⚠️" });
+      api<BackupInfo>("/api/backup").then(setC).catch(() => {});
+    }
+    setBusy(false);
+  };
+  return (
+    <Section title="Backup (on your PC)">
+      <input className={input} placeholder="Backup folder, e.g. D:\Backups (USB drive is best)" value={dir} onChange={(e) => setDir(e.target.value)} />
+      <Row label="Back up automatically (daily)" value={<Toggle on={!!c?.auto} onChange={(v) => void save({ auto: v, ...(dir !== c?.dir ? { dir } : {}) })} />} />
+      <button className={btn} disabled={busy || !dir.trim()} onClick={() => void run()}>{busy ? "Backing up…" : "Back up now"}</button>
+      <p className="text-xs text-slate-500">
+        {c?.lastRun ? `Last: ${new Date(c.lastRun).toLocaleString()} — ${c.lastOk ? "OK" : "failed"}. ${c.lastMsg ?? ""}` : "No backup yet. Saves your data, photos and videos."}
+      </p>
+    </Section>
+  );
+}
+
 const PRESETS_MB = [2048, 5120, 10240, 25600, 51200];
 
 export default function SettingsApp() {
@@ -103,6 +146,8 @@ export default function SettingsApp() {
         </Section>
 
         <SecuritySection notify={notify} />
+
+        <BackupSection notify={notify} />
 
         <Section title="Storage on PC">
           {storage?.disk ? (

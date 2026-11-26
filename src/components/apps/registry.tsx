@@ -14,6 +14,8 @@ import PianoApp from "./Piano";
 import SnakeApp from "./Snake";
 import Game2048App from "./Game2048";
 import WebApp from "./WebApp";
+import CameraApp from "./Camera";
+import GalleryApp from "./Gallery";
 
 // Maps an app id from the catalog to its UI.
 const REGISTRY: Record<string, ComponentType> = {
@@ -27,6 +29,8 @@ const REGISTRY: Record<string, ComponentType> = {
   browser: BrowserApp,
   paint: PaintApp,
   piano: PianoApp,
+  camera: CameraApp,
+  gallery: GalleryApp,
   snake: SnakeApp,
   "2048": Game2048App,
 };

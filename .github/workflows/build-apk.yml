@@ -16,6 +16,9 @@ jobs:
         with: { distribution: temurin, java-version: 21 }
       - run: npm install --no-audit --no-fund
       - run: npx cap add android
+      - run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <application#' android/app/src/main/AndroidManifest.xml
+          grep -n "CAMERA" android/app/src/main/AndroidManifest.xml
       - run: npx --yes @capacitor/assets generate --android
       - run: npx cap sync android
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
